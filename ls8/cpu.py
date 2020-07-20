@@ -76,19 +76,19 @@ class CPU:
         """Run the CPU."""
         running = True
         while running:
-            a = self.ram[self.pc]
-            if a == self.LDI:
+            inst = self.ram[self.pc]
+            if inst == self.LDI:
                 reg_num = self.ram[self.pc+1]
                 value = self.ram[self.pc+2]
                 self.reg[reg_num] = value
                 self.pc += 3
-            elif a == self.PRN:
+            elif inst == self.PRN:
                 reg_num = self.ram[self.pc+1]
                 print(self.reg[reg_num])
                 self.pc += 2
-            elif a == self.HLT:
+            elif inst == self.HLT:
                 running = False
                 self.pc += 1
             else:
-                print(f'Unkown instruction {a} at address {self.pc}')
+                print(f'Unkown instruction {inst} at address {self.pc}')
                 sys.exit(1)
