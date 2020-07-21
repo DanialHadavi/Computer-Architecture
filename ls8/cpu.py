@@ -33,15 +33,14 @@ class CPU:
 
         address = 0
 
-        # For now, we've just hardcoded a program:
         if len(sys.argv) != 2:
-            print("usage: comp.py filename")
+            print("usage: ls8.py filename")
             sys.exit(1)
         try:
             with open(sys.argv[1]) as f:
                 for line in f:
                     try:
-                        line = line.split("#")[0].strip()
+                        line = line.split("#", 1)[0].strip()
                         if line == "":
                             continue
                         else:
@@ -52,6 +51,8 @@ class CPU:
         except FileNotFoundError:
             print(f"Couldn't find file {sys.argv[1]}")
             sys.exit(1)
+
+        # For now, we've just hardcoded a program:
         # program = [
         #     # From print8.ls8
         #     0b10000010,  # LDI R0,8
