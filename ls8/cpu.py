@@ -9,6 +9,9 @@ MUL = 0b10100010  # Multiply
 ADD = 0b10100000  # Addition
 SUB = 0b10100001  # Subtraction
 DIV = 0b10100011  # Division
+SP = 7  # Stack Pointer
+POP = 0b01000110
+PUSH = 0b01000101
 
 
 class CPU:
@@ -20,7 +23,7 @@ class CPU:
         self.reg = [0] * 8
         self.pc = 0
         self.running = False
-        self.reg[7] = 0xF4
+        self.reg[SP] = 0xF4
 
     def ram_read(self, index):
         return self.ram[index]
@@ -34,7 +37,7 @@ class CPU:
         address = 0
 
         if len(sys.argv) != 2:
-            print("usage: ls8.py filename")
+            print("usage: ls8.py examples/filename")
             sys.exit(1)
         try:
             with open(sys.argv[1]) as f:
@@ -127,6 +130,21 @@ class CPU:
                 """ `HLT`: halt the CPU and exit the emulator."""
                 running = False
                 self.pc += 1
+            elif inst == PUSH:  # push
+                self.reg[SP] -= 1
+                self.reg[SP] &= 0xff
+                value = self.reg[reg_num]
+                address_to_push = self.reg[SP]
+                self.ram[address_to_push] = value
+                self.pc += 2
+            elif inst == POP:  # pop
+                address_to_pop = self.reg[SP]
+                value = self.ram[address_to_pop]
+                self.reg[reg_num] = value
+                self.reg[SP] += 1
+                self.reg[SP] &= 0xff
+                self.pc += 2
+
             else:
                 print(f'Unkown instruction {inst} at address {self.pc}')
                 sys.exit(1)
