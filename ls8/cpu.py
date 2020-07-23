@@ -12,6 +12,8 @@ DIV = 0b10100011  # Division
 SP = 7  # Stack Pointer
 POP = 0b01000110
 PUSH = 0b01000101
+RET = 0b00010001
+CALL = 0b01010000
 
 
 class CPU:
@@ -22,6 +24,7 @@ class CPU:
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
+        self.fl = 0
         self.running = False
         self.reg[SP] = 0xF4
 
@@ -129,10 +132,8 @@ class CPU:
             elif inst == HLT:
                 """ `HLT`: halt the CPU and exit the emulator."""
                 running = False
-                self.pc += 1
             elif inst == PUSH:  # push
                 self.reg[SP] -= 1
-                self.reg[SP] &= 0xff
                 value = self.reg[reg_num]
                 address_to_push = self.reg[SP]
                 self.ram[address_to_push] = value
@@ -142,8 +143,24 @@ class CPU:
                 value = self.ram[address_to_pop]
                 self.reg[reg_num] = value
                 self.reg[SP] += 1
-                self.reg[SP] &= 0xff
                 self.pc += 2
+            elif inst == CALL:  # call
+                return_addr = self.pc + 2
+                self.reg[SP] -= 1
+                address_to_push = self.reg[SP]
+                self.ram[address_to_push] = return_addr
+                reg_num = self.ram[self.pc+1]
+                sub_addr = self.reg[reg_num]
+                self.pc = sub_addr
+
+            elif inst == RET:  # return
+                address_to_pop = self.reg[SP]
+                return_addr = self.ram[address_to_pop]
+                self.reg[SP] += 1
+                self.pc = return_addr
+            elif inst == ADD:
+                self.alu("ADD", reg_num, value)
+                self.pc += 3
 
             else:
                 print(f'Unkown instruction {inst} at address {self.pc}')
