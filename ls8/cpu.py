@@ -14,6 +14,20 @@ POP = 0b01000110
 PUSH = 0b01000101
 RET = 0b00010001
 CALL = 0b01010000
+NOP = 0b00000000
+CMP = 0b10100111
+EQ = 0b00000111
+JMP = 0b01010100
+JEQ = 0b01010101
+JNE = 0b01010110
+# alu
+AND = 0b10101000
+MOD = 0b10100100
+SHL = 0b10101100
+SHR = 0b10101101
+XOR = 0b10101011
+OR = 0b10101010
+NOT = 0b01101001
 
 
 class CPU:
@@ -23,16 +37,17 @@ class CPU:
         """Construct a new CPU."""
         self.ram = [0] * 256
         self.reg = [0] * 8
+        self.flag = [0] * 8
         self.pc = 0
         self.fl = 0
         self.running = False
         self.reg[SP] = 0xF4
 
-    def ram_read(self, index):
-        return self.ram[index]
+    def ram_read(self, address):
+        return self.ram[address]
 
-    def ram_write(self, index, value):
-        self.ram[index] = value
+    def ram_write(self, address, value):
+        self.ram[address] = value
 
     def load(self):
         """Load a program into memory."""
@@ -84,6 +99,30 @@ class CPU:
             self.reg[reg_a] *= self.reg[reg_b]
         elif op == "DIV":
             self.reg[reg_a] /= self.reg[reg_b]
+        elif op == "CMP":
+            if reg_a == reg_b:
+                self.flag[EQ] = 0b00000001
+            elif reg_a > reg_b:
+                self.flag[EQ] = 0b10000010
+            else:
+                self.flag[EQ] = 0b00000000
+        elif op == "AND":
+            self.reg[reg_a] = self.reg[reg_a] & self.reg[reg_b]
+        elif op == "SHL":
+            self.reg[reg_a] << self.reg[reg_b]
+        elif op == "SHR":
+            self.reg[reg_a] >> self.reg[reg_b]
+        elif op == "OR":
+            self.reg[reg_a] = self.reg[reg_a] | self.reg[reg_b]
+        elif op == "NOT":
+            self.reg[reg_a] -= 0b11111111
+        elif op == "XOR":
+            self.reg[reg_a] = self.reg[reg_a] ^ self.reg[reg_b]
+        elif op == "MOD":
+            if self.reg[reg_b] == 0:
+                print("ERROR: Cannot mod by value of 0")
+            else:
+                self.reg[reg_a] %= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -115,35 +154,41 @@ class CPU:
             inst = self.ram[self.pc]
             reg_num = self.ram[self.pc+1]
             value = self.ram[self.pc+2]
+            ir = self.ram_read(self.pc)
+            pc_flag = (ir & 0b00010000) >> 4
+            if pc_flag == 0:
+                move = int((ir & 0b11000000) >> 6)
+                self.pc += move + 1
 
             if inst == LDI:
                 """ `LDI`: load "immediate", store a value in a register, or "set this register to
                 this value"."""
                 self.reg[reg_num] = value
-                self.pc += 3
+
             elif inst == MUL:
                 self.reg[reg_num] *= self.reg[value]
-                self.pc += 3
+
             elif inst == PRN:
                 """ `PRN`: a pseudo-instruction that prints the numeric value stored in a
                 register."""
                 print(self.reg[reg_num])
-                self.pc += 2
+
             elif inst == HLT:
                 """ `HLT`: halt the CPU and exit the emulator."""
                 running = False
             elif inst == PUSH:  # push
                 self.reg[SP] -= 1
                 value = self.reg[reg_num]
+
                 address_to_push = self.reg[SP]
                 self.ram[address_to_push] = value
-                self.pc += 2
+
             elif inst == POP:  # pop
                 address_to_pop = self.reg[SP]
                 value = self.ram[address_to_pop]
                 self.reg[reg_num] = value
                 self.reg[SP] += 1
-                self.pc += 2
+
             elif inst == CALL:  # call
                 return_addr = self.pc + 2
                 self.reg[SP] -= 1
@@ -161,6 +206,23 @@ class CPU:
             elif inst == ADD:
                 self.alu("ADD", reg_num, value)
                 self.pc += 3
+            # SPRINT
+            elif inst == CMP:
+                a = self.reg[reg_num]
+                b = self.reg[value]
+                self.alu("CMP", a, b)
+            elif inst == JMP:
+                self.pc = self.reg[reg_num]
+            elif inst == JEQ:
+                if self.flag[EQ] == 0b00000001:
+                    self.pc = self.reg[reg_num]
+                else:
+                    self.pc += 2
+            elif inst == JNE:
+                if self.flag[EQ] == 0b00000000:
+                    self.pc = self.reg[reg_num]
+                else:
+                    self.pc += 2
 
             else:
                 print(f'Unkown instruction {inst} at address {self.pc}')
